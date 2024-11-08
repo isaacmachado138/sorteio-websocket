@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 
 const app     = express();
 
-const { updateAdminClientCount } = require('./utils/functions');
+const { updateAdminClientCount, handleIncomingMessage } = require('./utils/functions');
 
 // criando servidor http
 const server  = http.createServer(app);
@@ -26,19 +26,20 @@ server.listen(APP_PORT, () =>
 );
 
 // lista de clientes conectados
-let clients = [];
+wss.clientsList = [];
 
 //ações do websocket
 wss.on('connection', ws => {
-  clients.push(ws);
+  wss.clientsList.push(ws);
+  //console.log(clients);
   updateAdminClientCount(wss);
 
   // filtra retirando o websocket do clients
   ws.on("close", () => {
-    clients = clients.filter(client => client !== ws);
+    wss.clientsList = wss.clientsList.filter(client => client !== ws);
     updateAdminClientCount(wss);
   });
 
-  ws.on("message", handleIncomingMessage.bind(null, ws));
+  ws.on("message", message => handleIncomingMessage(ws, message, wss.clientsList));
 })
 

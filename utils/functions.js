@@ -1,5 +1,6 @@
-const { ACTIONS, STATUS } = require('../js/config');
+const { ACTIONS, STATUS } = require('../public/js/config');
 
+const WebSocket = require('ws');
 
 /**
  * Atualiza a contagem de clientes não administradores e envia essa contagem para todos os clientes conectados.
@@ -7,7 +8,7 @@ const { ACTIONS, STATUS } = require('../js/config');
  * @param {WebSocket.Server} wss - O servidor WebSocket que contém os clientes conectados.
  */
 function updateAdminClientCount(wss) {
-  const clientCount = Array.from(wss.clients).filter((client) => !client.isAdmin).length;
+  const clientCount = Array.from(wss.clientsList).filter((client) => !client.isAdmin).length;
 
   sendClientCount(wss, clientCount);
 }
@@ -20,7 +21,7 @@ function updateAdminClientCount(wss) {
  * @param {WebSocket} ws - A conexão WebSocket.
  * @param {string} message - A mensagem recebida em formato JSON.
  */
-function handleIncomingMessage(ws, message) {
+function handleIncomingMessage(ws, message, clientList) {
   const parsedMessage = JSON.parse(message);
 
   const action = parsedMessage.action;
@@ -30,7 +31,7 @@ function handleIncomingMessage(ws, message) {
       ws.isAdmin = true;
       break;
     case ACTIONS.DRAW:  
-      handleDraw(wss, parsedMessage.code);
+      handleDraw(ws, parsedMessage.code, clientList);
       break;
     default:
       console.warn(`Unknown action: ${action}`);
@@ -46,9 +47,21 @@ function handleIncomingMessage(ws, message) {
  * @param {WebSocket.Server} wss - O servidor WebSocket.
  * @param {string} code - O código a ser enviado ao vencedor.
  */
-function handleDraw(wss, code) {
+function handleDraw(wss, code, clientsList) {
   //handleDraw code
-  let participants = Array.from(wss.clients).filter((client) => !client.isAdmin);
+
+  if (!clientsList || clientsList.size === 0) {
+    console.warn('No clients connected.');
+    return;
+  }
+
+  let participants = Array.from(clientsList).filter((client) => !client.isAdmin);
+
+  if (participants.length === 0) {
+    console.warn('No participants available for the draw.');
+    return;
+  }
+
   const winner = participants[Math.floor(Math.random() * participants.length)];
 
   participants.forEach((client) => {

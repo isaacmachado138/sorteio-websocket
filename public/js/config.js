@@ -10,3 +10,5 @@ const ACTIONS = {
   DRAW: "draw",
   CLIENT_COUNT_UPDATE: "clientCountUpdate",
 };
+
+module.exports = { WS_URL, ACTIONS, STATUS };
